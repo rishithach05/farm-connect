@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import connectDB from '@/lib/mongodb';
+import Order from '@/lib/models/Order';
+import User from '@/lib/models/User';
+import Product from '@/lib/models/Product';
 import DeliveryClient from './DeliveryClient';
-
-const globalForPrisma = global;
-export const prisma = globalForPrisma.prisma || new PrismaClient();
 
 export default async function DeliveryDashboard() {
   const cookieStore = cookies();
@@ -18,21 +18,44 @@ export default async function DeliveryDashboard() {
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET || 'super-secret-fallback');
-    // Allow ADMIN or DELIVERY_PARTNER. If they login as CUSTOMER/FARMER, let's just let them view it for demo purposes, but ideally restrict.
+    // Allow ADMIN or DELIVERY_PARTNER.
     if (decoded.role === 'CUSTOMER') redirect('/marketplace');
   } catch (err) {
     redirect('/login');
   }
 
+  await connectDB();
+
   // Fetch all orders assigned to delivery partners
-  const assignedOrders = await prisma.order.findMany({
-    where: { deliveryType: 'partner' },
-    include: {
-      customer: { select: { name: true, phone: true, location: true } },
-      items: { include: { product: { select: { name: true, farmer: { select: { location: true } } } } } }
+  const orders = await Order.find({ deliveryType: 'partner' })
+    .populate('customerId')
+    .populate({
+      path: 'items.productId',
+      populate: { path: 'farmerId' }
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Map Mongoose objects to match the expected frontend structure
+  const assignedOrders = orders.map(order => ({
+    id:           order._id.toString(),
+    status:       order.status,
+    deliveryFee:  order.deliveryFee,
+    customer: {
+      name:     order.customer?.name || order.customerId?.name || 'Unknown',
+      phone:    order.customer?.phone || order.customerId?.phone || 'N/A',
+      location: order.customer?.location || order.customerId?.location || 'Unknown'
     },
-    orderBy: { createdAt: 'desc' }
-  });
+    items: order.items.map(item => ({
+      quantity: item.quantity,
+      product: {
+        name: item.productId?.name || 'Deleted Product',
+        farmer: {
+          location: item.productId?.farmerId?.location || 'Local Farm'
+        }
+      }
+    }))
+  }));
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font-inter)' }}>
@@ -88,7 +111,7 @@ export default async function DeliveryDashboard() {
         </div>
       </div>
 
-      <h2 style={{ fontSize: '1.4rem', color: '#1e293b', marginbottom: '1.5rem', fontWeight: 800 }}>Available Deliveries</h2>
+      <h2 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '1.5rem', fontWeight: 800 }}>Available Deliveries</h2>
 
       <DeliveryClient initialOrders={assignedOrders} />
     </div>

@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { redirect } from 'next/navigation';
-
-const globalForPrisma = global;
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+import connectDB from '@/lib/mongodb';
+import User from '@/lib/models/User';
+import Product from '@/lib/models/Product';
+import Order from '@/lib/models/Order';
 
 export default async function AdminDashboard() {
   const cookieStore = cookies();
@@ -13,15 +13,49 @@ export default async function AdminDashboard() {
   if (!token) redirect('/login');
 
   let decoded;
-  try { decoded = jwt.verify(token, process.env.JWT_SECRET || 'super-secret-fallback'); } 
-  catch (err) { redirect('/login'); }
+  try { 
+    decoded = jwt.verify(token, process.env.JWT_SECRET || 'super-secret-fallback'); 
+  } catch (err) { 
+    redirect('/login'); 
+  }
 
   // Temporarily allowing anyone to view Admin for demo purposes, 
-  // normally we'd check `if (decoded.role !== 'ADMIN') redirect('/');`
+  // normally we'd check if (decoded.role !== 'ADMIN') redirect('/');
   
-  const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 20 });
-  const products = await prisma.product.findMany({ include: { farmer: true }, orderBy: { createdAt: 'desc' }, take: 20 });
-  const orders = await prisma.order.findMany({ include: { customer: true }, orderBy: { createdAt: 'desc' }, take: 20 });
+  await connectDB();
+
+  const [usersRaw, productsRaw, ordersRaw] = await Promise.all([
+    User.find().sort({ createdAt: -1 }).limit(20).lean(),
+    Product.find().populate('farmerId').sort({ createdAt: -1 }).limit(20).lean(),
+    Order.find().populate('customerId').sort({ createdAt: -1 }).limit(20).lean(),
+  ]);
+
+  // Serialize Mongoose objects
+  const users = usersRaw.map(u => ({
+    id: u._id.toString(),
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    location: u.location || '-',
+    createdAt: u.createdAt
+  }));
+
+  const products = productsRaw.map(p => ({
+    id: p._id.toString(),
+    name: p.name,
+    farmer: { name: p.farmerId?.name || 'Deleted Farmer' },
+    category: p.category,
+    quantity: p.quantity,
+    unit: p.unit,
+    price: p.price
+  }));
+
+  const orders = ordersRaw.map(o => ({
+    id: o._id.toString(),
+    customer: { name: o.customer?.name || o.customerId?.name || 'Unknown' },
+    status: o.status,
+    total: o.total
+  }));
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', fontFamily: 'var(--font-inter)' }}>
