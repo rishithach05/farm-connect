@@ -348,9 +348,25 @@ export default function Marketplace() {
                       <span style={{ fontWeight: 700, color: '#475569' }}>👨‍🌾 {product.farmer?.name || 'Local Farmer'}</span>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '1rem', color: '#eab308', fontSize: '0.9rem', fontWeight: 700 }}>
-                      ⭐ {(4.0 + Math.random()).toFixed(1)} <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.8rem' }}>( {(Math.random() * 200 + 10).toFixed(0)} views )</span>
-                    </div>
+                    {(() => {
+                      const MOCK_STATS = {
+                        'Fresh Bananas': { rating: '4.9', views: 51 },
+                        'Red Apples': { rating: '4.5', views: 155 },
+                        'Alphonso Mangoes': { rating: '4.8', views: 193 },
+                        'Green Cabbage': { rating: '4.5', views: 183 },
+                        'Red Onions': { rating: '4.2', views: 60 },
+                        'Crunchy Carrots': { rating: '4.9', views: 151 },
+                      };
+                      const stats = MOCK_STATS[product.name] || {
+                        rating: (4.0 + (product.name.length % 10) / 10).toFixed(1),
+                        views: (product.name.length * 13 % 200 + 10)
+                      };
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '1rem', color: '#eab308', fontSize: '0.9rem', fontWeight: 700 }}>
+                          ⭐ {stats.rating} <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.8rem' }}>( {stats.views} views )</span>
+                        </div>
+                      );
+                    })()}
                     
                     {product.quantity > 0 && product.quantity < 10 && (
                       <div style={{ fontSize: '0.8rem', color: '#dc2626', marginBottom: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#fee2e2', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>

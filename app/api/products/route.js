@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import connectDB from '@/lib/mongodb';
 import Product from '@/lib/models/Product';
+import User from '@/lib/models/User';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export async function GET(req) {
     return NextResponse.json({ products: normalized }, { status: 200 });
   } catch (error) {
     console.error('Fetch products error:', error);
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    return NextResponse.json({ error: error.message || error.toString(), stack: error.stack }, { status: 500 });
   }
 }
 

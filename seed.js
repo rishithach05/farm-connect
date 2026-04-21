@@ -7,6 +7,10 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 
+// Fix for Node.js querySrv ECONNREFUSED error
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI is not set in .env');
