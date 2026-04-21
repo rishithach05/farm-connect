@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function OrderTracking() {
+function TrackingDetails() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('id');
   
@@ -28,12 +28,10 @@ export default function OrderTracking() {
 
   useEffect(() => {
     fetchOrder();
-    // No auto-refresh from DB needed for demo, we use simulated progression next
   }, [orderId]);
 
   useEffect(() => {
     if (order) {
-      // Simulate live status updates for Wow factor demo
       const timer1 = setTimeout(() => setSimulatedStatus('Packed'), 3000);
       const timer2 = setTimeout(() => setSimulatedStatus('Out for Delivery'), 6000);
       const timer3 = setTimeout(() => setSimulatedStatus('Delivered'), 10000);
@@ -48,7 +46,6 @@ export default function OrderTracking() {
   const steps = ['Placed', 'Packed', 'Out for Delivery', 'Delivered'];
   const currentStepIndex = steps.indexOf(simulatedStatus);
   
-  // Calculate simulated ETA via minutes
   const etaMins = order.eta || Math.floor(Math.random() * 20) + 20;
 
   return (
@@ -114,7 +111,6 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      {/* Delivery Agent Info Card */}
       <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.5rem' }}>
@@ -153,7 +149,6 @@ export default function OrderTracking() {
         ))}
       </div>
 
-      {/* Simulated Live Map Tracking */}
       <div style={{ height: '250px', background: '#e2e8f0', borderRadius: '16px', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%2394a3b8\' fill-opacity=\'0.2\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'3\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'3\'/%3E%3C/g%3E%3C/svg%3E")' }}></div>
         <div style={{ background: 'white', padding: '1rem 2rem', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 10, display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -169,8 +164,8 @@ export default function OrderTracking() {
             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
               <div style={{ background: '#f8fafc', width: '60px', height: '60px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🌾</div>
               <div>
-                <div className="item-name">{item.product.name}</div>
-                <div className="item-qty">Qty: {item.quantity} {item.product.unit}</div>
+                <div className="item-name">{item.product?.name || 'Deleted Product'}</div>
+                <div className="item-qty">Qty: {item.quantity} {item.product?.unit || 'kg'}</div>
               </div>
             </div>
             <div className="item-price">₹{(item.price * item.quantity).toFixed(2)}</div>
@@ -184,11 +179,19 @@ export default function OrderTracking() {
       </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '3rem' }}>
-        <button onClick={() => alert('Downloading Mock PDF Receipt...')} style={{ background: 'white', color: '#0f172a', fontWeight: 700, padding: '1rem 2rem', borderRadius: '30px', border: '2px solid #e2e8f0', cursor: 'pointer', transition: '0.2s' }} onMouseOver={e => e.target.style.background = '#f8fafc'} onMouseOut={e => e.target.style.background = 'white'}>
+        <button onClick={() => alert('Downloading Mock PDF Receipt...')} style={{ background: 'white', color: '#0f172a', fontWeight: 700, padding: '1rem 2rem', borderRadius: '30px', border: '2px solid #e2e8f0', cursor: 'pointer', transition: '0.2s' }}>
           📥 Download Receipt (PDF)
         </button>
-        <a href="/marketplace" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', background: '#ecfdf5', padding: '1rem 2rem', borderRadius: '30px', transition: 'background 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center' }} onMouseOver={(e) => e.target.style.background = '#d1fae5'} onMouseOut={(e) => e.target.style.background = '#ecfdf5'}>← Continue Shopping</a>
+        <a href="/marketplace" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', background: '#ecfdf5', padding: '1rem 2rem', borderRadius: '30px', transition: 'background 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>← Continue Shopping</a>
       </div>
     </div>
+  );
+}
+
+export default function OrderTracking() {
+  return (
+    <Suspense fallback={<div style={{textAlign: 'center', padding: '5rem', color: '#64748b'}}>Initializing dynamic tracking module...</div>}>
+      <TrackingDetails />
+    </Suspense>
   );
 }
