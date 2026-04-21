@@ -3,6 +3,40 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import connectDB from '@/lib/mongodb';
 import Order from '@/lib/models/Order';
+import Product from '@/lib/models/Product';
+import User from '@/lib/models/User';
+
+export async function GET(req, { params }) {
+  try {
+    await connectDB();
+    const { id } = params;
+
+    const order = await Order.findById(id)
+      .populate('customerId')
+      .populate('items.productId')
+      .lean();
+
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Normalize to match frontend expectations
+    const normalized = {
+      ...order,
+      id: order._id.toString(),
+      items: order.items.map(item => ({
+        ...item,
+        product: item.productId,
+        productId: item.productId?._id?.toString() || item.productId?.toString(),
+      }))
+    };
+
+    return NextResponse.json({ order: normalized });
+  } catch (error) {
+    console.error('Fetch order error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 
 export async function PATCH(req, { params }) {
   try {
